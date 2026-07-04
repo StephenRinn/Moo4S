@@ -1,7 +1,6 @@
 ThisBuild / organization := "io.github.stephenrinn"
 ThisBuild / organizationName := "Stephen Rinn"
 ThisBuild / organizationHomepage := Some(url("https://github.com/StephenRinn"))
-ThisBuild / version := "1.0.0"
 ThisBuild / versionScheme := Some("early-semver")
 
 ThisBuild / publishMavenStyle := true
