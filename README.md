@@ -123,8 +123,6 @@ val commands = cowCommands {
 // commands: List[Command.CowCommand] with 3 elements
 ```
 
-## Architecture
-
 ## Testing
 
 Run the comprehensive test suite:
