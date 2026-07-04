@@ -45,6 +45,15 @@ This project provides:
 
 ## Usage
 
+### Importing Moo4S
+
+Add the dependency to your build.sbt file
+```scala
+libraryDependencies ++= Seq(
+  "io.github.stephenrinn" %% "moo4s" % "1.0.13",
+)
+```
+
 ### Using the Scala DSL
 
 The easiest way to write COW programs is using the Scala DSL:
