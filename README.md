@@ -31,12 +31,6 @@ This project provides:
 
 ### Key Features
 
-**Spec-Compliant Loop Matching** - Proper handling of nested and sequential loops with correct jump semantics
-
-**Register System** - Toggle-based copy/paste operations for value manipulation
-
-**Dual-Mode I/O** - Character and integer input/output support
-
 **Memory Management** - Configurable memory size (default 30,000 cells)
 
 **Scala DSL** - Write COW programs using natural Scala syntax
