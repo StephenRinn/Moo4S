@@ -19,6 +19,12 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
+      - name: Check if secret exists
+        run: |
+          echo "${{ secrets.SONATYPE_USERNAME }}"
+          echo "${{ secrets.SONATYPE_PASSWORD }}"
+          echo "${{ secrets.PGP_PASSPHRASE }}"
+
       - name: Import GPG key
         run: |
           echo "${{ secrets.PGP_SECRET }}" | base64 --decode > secret.asc
