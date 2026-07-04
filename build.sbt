@@ -9,6 +9,15 @@ ThisBuild / homepage := Some(url("https://github.com/StephenRinn/Moo4S"))
 
 ThisBuild / licenses += "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0")
 
+ThisBuild / publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+
 ThisBuild / scmInfo := Some(
   ScmInfo(
     url("https://github.com/StephenRinn/Moo4S"),
