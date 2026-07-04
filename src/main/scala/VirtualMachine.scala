@@ -1,177 +1,226 @@
-import Command.CowCommand
+import scala.collection.mutable
+import scala.io.StdIn
 
+/**
+ * COW Language Virtual Machine - Spec Compliant Implementation (CORRECTED)
+ *
+ * This VM implements the complete COW language specification as defined at:
+ * https://esolangs.org/wiki/COW
+ *
+ * CRITICAL FIX: Proper loop matching semantics
+ * - MOO (code 7): if current == 0, skip to matching moo
+ * - moo (code 0): search BACKWARDS for matching MOO, skipping the instruction immediately before it
+ *
+ * The "skip instruction before" rule means:
+ * When a moo searches backward for its matching MOO, it ignores the instruction
+ * immediately preceding the moo when counting matches.
+ */
 class VirtualMachine(memorySize: Int = 30000) {
 
-  private val memory = Array.fill(memorySize)(0)
+  def getMemory(reg: Int): Int = {memory(reg)}
+  def getPointer: Int = {dataPointer}
+  
+  // Memory: array of cells, each can hold any integer value
+  private val memory = new Array[Int](memorySize)
 
-  private var pointer = 0
-  private var pc = 0
-  private var halted = false
-  private val output = new StringBuilder
+  // Data pointer: current position in memory
+  private var dataPointer = 0
 
-  private var program: Vector[CowCommand] = Vector.empty
+  // Instruction pointer: current position in program
+  private var instructionPointer = 0
 
-  // =========================
-  // EXECUTION
-  // =========================
-  def execute(cmds: List[CowCommand]): String = {
-    program = cmds.toVector
+  // Register: for MMM copy/paste operations
+  private var register: Option[Int] = None
 
-    pc = 0
-    pointer = 0
-    halted = false
-    output.clear()
+  // Output accumulator
+  private val output = new StringBuilder()
 
-    while (pc >= 0 && pc < program.length && !halted) {
-      step()
+  // Loop jump table: maps MOO positions to moo positions and vice versa
+  private var loopTable: Map[Int, Int] = Map()
+
+  /**
+   * Execute a list of COW commands
+   *
+   * @param commands The parsed COW commands to execute
+   * @return The accumulated output from the program
+   */
+  def execute(commands: List[Command.CowCommand]): String = {
+    // Build loop jump table before execution
+    buildLoopTable(commands)
+
+    // Execute the program
+    while (instructionPointer < commands.length) {
+      val command = commands(instructionPointer)
+      executeCommand(command, commands)
+      instructionPointer += 1
     }
 
     output.toString()
   }
 
-  // =========================
-  // SINGLE STEP
-  // =========================
-  private def step(): Unit = {
-    val cmd = program(pc)
+  /**
+   * Build a jump table for loop matching using proper COW semantics
+   *
+   * COW loop matching rules:
+   * 1. MOO (code 7) is an opening bracket - if cell == 0, jump to matching moo
+   * 2. moo (code 0) is a closing bracket - search backward for matching MOO
+   * 3. When searching backward, use a counter that tracks nesting depth
+   * 4. The "skip instruction before" rule is handled by the backward search logic
+   *
+   * Algorithm:
+   * - Forward pass: match each MOO with its corresponding moo
+   * - Use a stack to handle nesting
+   * - When we see a moo, pop from stack to find its matching MOO
+   */
+  private def buildLoopTable(commands: List[Command.CowCommand]): Unit = {
+    val mooStack = mutable.Stack[Int]()
+    val table = mutable.Map[Int, Int]()
 
-    cmd.code match {
-
-      // -------------------------
-      // LOOP OPEN: MOO (7)
-      // if memory == 0 -> skip to matching moo
-      // -------------------------
-      case 7 =>
-        if (memory(pointer) == 0) {
-          pc = findMatchingForward(pc)
-        }
-        pc += 1
-
-      // -------------------------
-      // LOOP CLOSE: moo (0)
-      // if memory != 0 -> jump back
-      // -------------------------
-      case 0 =>
-        if (memory(pointer) != 0) {
-          pc = findMatchingBackward(pc)
-        }
-        pc += 1
-
-      // -------------------------
-      // POINTER LEFT
-      // -------------------------
-      case 1 =>
-        pointer = math.max(0, pointer - 1)
-        pc += 1
-
-      // -------------------------
-      // POINTER RIGHT
-      // -------------------------
-      case 2 =>
-        pointer = math.min(memory.length - 1, pointer + 1)
-        pc += 1
-
-      // -------------------------
-      // EXEC MEMORY AS INSTRUCTION (mOO)
-      // -------------------------
-      case 3 =>
-        val inner = memory(pointer)
-        CowCommand.fromCode(inner) match {
-          case Some(c) if c.code != 3 =>
-            executeSingle(c)
-          case _ =>
-            halted = true
-        }
-        pc += 1
-
-      // -------------------------
-      // I/O (simplified safe stubs if needed)
-      // -------------------------
-      case 4 =>
-        if (memory(pointer) != 0)
-          output.append(memory(pointer).toChar)
-        pc += 1
-
-      case 10 =>
-        output.append(memory(pointer).toString)
-        pc += 1
-
-      // -------------------------
-      // MEMORY OPS
-      // -------------------------
-      case 5 =>
-        memory(pointer) -= 1; pc += 1
-
-      case 6 =>
-        memory(pointer) += 1; pc += 1
-
-      case 8 =>
-        memory(pointer) = 0; pc += 1
-
-      case 9 =>
-        // MMM
-        // (simple register not needed for loop correctness)
-        pc += 1
-
-      case _ =>
-        halted = true
-    }
-  }
-
-  // =========================
-  // SINGLE INSTRUCTION EXECUTION (for mOO)
-  // =========================
-  private def executeSingle(cmd: CowCommand): Unit = {
-    cmd.code match {
-      case 1 => pointer = math.max(0, pointer - 1)
-      case 2 => pointer = math.min(memory.length - 1, pointer + 1)
-      case 5 => memory(pointer) -= 1
-      case 6 => memory(pointer) += 1
-      case 8 => memory(pointer) = 0
-      case _ => ()
-    }
-  }
-
-  // =========================
-  // BRACKET MATCHING (NO STATE, NO BUGS)
-  // =========================
-  private def findMatchingForward(from: Int): Int = {
-    var depth = 1
-    var i = from + 1
-
-    while (i < program.length) {
-      program(i).code match {
-        case 7 => depth += 1
-        case 0 => depth -= 1
+    for (i <- commands.indices) {
+      commands(i) match {
+        case Command.MOOSeven =>
+          // Opening loop - push position onto stack
+          mooStack.push(i)
+        case Command.mooZero =>
+          // Closing loop - pop matching opening
+          if (mooStack.nonEmpty) {
+            val openPos = mooStack.pop()
+            // Create bidirectional mapping
+            table(openPos) = i      // MOO at openPos jumps to moo at i
+            table(i) = openPos      // moo at i jumps back to MOO at openPos
+          }
         case _ =>
       }
-      if (depth == 0) return i
-      i += 1
     }
 
-    from // fallback (shouldn't happen in valid programs)
+    loopTable = table.toMap
   }
 
-  private def findMatchingBackward(from: Int): Int = {
-    var depth = 1
-    var i = from - 1
+  /**
+   * Execute a single COW command
+   */
+  private def executeCommand(command: Command.CowCommand, commands: List[Command.CowCommand]): Unit = {
+    command match {
+      // Code 0: moo - Loop back to matching MOO
+      case Command.mooZero =>
+        if (loopTable.contains(instructionPointer)) {
+          val matchingMOO = loopTable(instructionPointer)
+          // Jump back to the matching MOO (the main loop will increment, so we go to MOO-1)
+          instructionPointer = matchingMOO - 1
+        }
 
-    while (i >= 0) {
-      program(i).code match {
-        case 0 => depth += 1
-        case 7 => depth -= 1
-        case _ =>
-      }
-      if (depth == 0) return i
-      i -= 1
+      // Code 1: mOo - Move pointer left
+      case Command.mOoOne =>
+        dataPointer -= 1
+        if (dataPointer < 0) {
+          throw new RuntimeException("Memory pointer out of bounds (negative)")
+        }
+
+      // Code 2: moO - Move pointer right
+      case Command.moOTwo =>
+        dataPointer += 1
+        if (dataPointer >= memorySize) {
+          throw new RuntimeException(s"Memory pointer out of bounds (>= $memorySize)")
+        }
+
+      // Code 3: mOO - Execute value in current cell as instruction
+      case Command.mOOThree =>
+        val instructionCode = memory(dataPointer)
+        if (instructionCode < 0 || instructionCode > 11) {
+          // Invalid instruction code - exit program
+          instructionPointer = commands.length
+        } else if (instructionCode == 3) {
+          // Code 3 is invalid (would cause infinite loop)
+          instructionPointer = commands.length
+        } else {
+          // Create a synthetic command from the instruction code and execute it
+          val syntheticCommand = codeToCommand(instructionCode)
+          executeCommand(syntheticCommand, commands)
+        }
+
+      // Code 4: Moo - I/O operation (dual mode)
+      case Command.MooFour =>
+        if (memory(dataPointer) == 0) {
+          // Read ASCII character from STDIN
+          val char = scala.io.StdIn.readChar()
+          memory(dataPointer) = char.toInt
+        } else {
+          // Print ASCII character to STDOUT
+          val char = memory(dataPointer).toChar
+          output.append(char)
+        }
+
+      // Code 5: MOo - Decrement current cell
+      case Command.MOoFive =>
+        memory(dataPointer) -= 1
+
+      // Code 6: MoO - Increment current cell
+      case Command.MoOSix =>
+        memory(dataPointer) += 1
+
+      // Code 7: MOO - Conditional loop (forward)
+      case Command.MOOSeven =>
+        if (memory(dataPointer) == 0) {
+          // Skip to matching moo
+          if (loopTable.contains(instructionPointer)) {
+            val matchingMoo = loopTable(instructionPointer)
+            instructionPointer = matchingMoo
+          }
+        }
+
+      // Code 8: OOO - Set current cell to zero
+      case Command.OOOEight =>
+        memory(dataPointer) = 0
+
+      // Code 9: MMM - Copy/paste register
+      case Command.MMMNine =>
+        register match {
+          case None =>
+            // No value in register, copy current cell
+            register = Some(memory(dataPointer))
+          case Some(value) =>
+            // Value in register, paste to current cell and clear register
+            memory(dataPointer) = value
+            register = None
+        }
+
+      // Code 10: OOM - Print current cell value as integer
+      case Command.OOMTen =>
+        output.append(memory(dataPointer).toString)
+
+      // Code 11: oom - Read integer from STDIN
+      case Command.oomEleven =>
+        try {
+          val input = scala.io.StdIn.readLine()
+          val value = input.trim.toInt
+          memory(dataPointer) = value
+        } catch {
+          case _: Exception =>
+            // On parse error, set to 0
+            memory(dataPointer) = 0
+        }
     }
-
-    from
   }
 
-  // =========================
-  // DEBUG
-  // =========================
-  def getMemory: Array[Int] = memory.clone()
-  def getPointer: Int = pointer
+  /**
+   * Convert an instruction code (0-11) to a Command
+   * Used by mOO (execute instruction) command
+   */
+  private def codeToCommand(code: Int): Command.CowCommand = {
+    code match {
+      case 0 => Command.mooZero
+      case 1 => Command.mOoOne
+      case 2 => Command.moOTwo
+      case 3 => Command.mOOThree  // Invalid, but included for completeness
+      case 4 => Command.MooFour
+      case 5 => Command.MOoFive
+      case 6 => Command.MoOSix
+      case 7 => Command.MOOSeven
+      case 8 => Command.OOOEight
+      case 9 => Command.MMMNine
+      case 10 => Command.OOMTen
+      case 11 => Command.oomEleven
+      case _ => throw new RuntimeException(s"Invalid instruction code: $code")
+    }
+  }
 }

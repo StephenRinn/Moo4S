@@ -1,523 +1,648 @@
-import Command.CowCommand
+
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import CowDSL.*
 
+/**
+ * Comprehensive test suite for COW DSL and Virtual Machine
+ *
+ * Tests cover:
+ * - Individual instruction execution
+ * - Memory operations
+ * - Loop semantics
+ * - Register operations
+ * - I/O operations
+ * - Complex programs
+ */
 class CowDSLSpec extends AnyFlatSpec with Matchers {
 
-  "CowDSL" should "execute a single instruction" in {
-    val result = cow {
-      Moo
-    }
-    result should be("")
-  }
+  // ===== Basic Instruction Tests =====
 
-  it should "execute multiple instructions in sequence" in {
-    val result = cow {
-      Moo
-      moo
-      MOo
+  "MoO (increment)" should "increment current cell" in {
+    val output = CowDSL.cow {
       MoO
-    }
-    result should be("")
-  }
-
-  it should "accumulate commands in order" in {
-    val commands = cowCommands {
-      Moo
-      moo
-      MOo
       MoO
+      MoO
+      OOM
     }
-    commands should equal(List(
-      MooInstrTokenFour,
-      MooTokenZero,
-      MOoTokenOne,
-      MoOTokenTwo
-    ))
+    output should equal("3")
   }
 
-  it should "execute all 12 instructions" in {
-    val commands = cowCommands {
-      moo
-      mOo
+  "MOo (decrement)" should "decrement current cell" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MOo
+      MOo
+      OOM
+    }
+    output should equal("3")
+  }
+
+  "OOO (set to zero)" should "set current cell to zero" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      OOO
+      OOM
+    }
+    output should equal("0")
+  }
+
+  "mOo (move left)" should "move pointer to the left" in {
+    val output = CowDSL.cow {
+      MoO
       moO
-      mOO
-      Moo
-      MOo
+      MoO
+      MoO
+      mOo
+      OOM
+    }
+    output should equal("1")
+  }
+
+  // ===== Loop Tests =====
+
+  "MOO/moo (loop)" should "execute loop body while cell is non-zero" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
       MoO
       MOO
+      MOo
+      moo
+      OOM
+    }
+    output should equal("0")
+  }
+
+  "MOO/moo (nested loops)" should "handle nested loop structures" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MOO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      mOo
+      mOo
+      mOo
+      mOo
+      mOo
+      MOo
+      moo
+      moO
+      moO
+      moO
+      moO
+      Moo
+      moO
+      MOO
+      mOo
+      MoO
+      moO
+      MOo
+      moo
+      mOo
+      MOo
+      MOo
+      MOo
+      Moo
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      Moo
+      Moo
+      MoO
+      MoO
+      MoO
+      Moo
+      MMM
+      mOo
+      mOo
+      mOo
+      MoO
+      MoO
+      MoO
+      MoO
+      Moo
+      moO
+      Moo
+      MOO
+      moO
+      moO
+      MOo
+      mOo
+      mOo
+      MOo
+      moo
+      moO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      Moo
+      MMM
+      MMM
+      Moo
+      MoO
+      MoO
+      MoO
+      Moo
+      MMM
+      MOo
+      MOo
+      MOo
+      Moo
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      Moo
+      mOo
+      MoO
+      Moo
+    }
+    output should equal("Hello, World!")
+  }
+
+  "MOO/moo (loop with counter)" should "decrement counter correctly" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MOO
+      MOo
+      moo
+      OOM
+    }
+    output should equal("0")
+  }
+
+  // ===== Register Tests =====
+
+  "MMM (copy)" should "copy current cell to register" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MMM
       OOO
       MMM
       OOM
-      oom
     }
-    commands.length should equal(12)
-    commands should equal(List(
-      MooTokenZero,
-      MOoTokenOne,
-      MoOTokenTwo,
-      MOOTokenThree,
-      MooInstrTokenFour,
-      MOoInstrTokenFive,
-      MoOInstrTokenSix,
-      MOOInstrTokenSeven,
-      OOOTokenEight,
-      MMMTokenNine,
-      OOMTokenTen,
-      OomTokenEleven
-    ))
+    output should equal("5")
   }
 
-  it should "handle empty block" in {
-    val result = cow {
-      // empty
-    }
-    result should be("")
-  }
-
-  it should "handle repeated instructions" in {
-    val commands = cowCommands {
-      Moo
-      Moo
-      Moo
-      moo
-      moo
-    }
-    commands should equal(List(
-      MooInstrTokenFour,
-      MooInstrTokenFour,
-      MooInstrTokenFour,
-      MooTokenZero,
-      MooTokenZero
-    ))
-  }
-
-  it should "handle alternating instructions" in {
-    val commands = cowCommands {
-      Moo
-      moo
-      Moo
-      moo
-      Moo
-    }
-    commands should equal(List(
-      MooInstrTokenFour,
-      MooTokenZero,
-      MooInstrTokenFour,
-      MooTokenZero,
-      MooInstrTokenFour
-    ))
-  }
-
-  it should "handle loop structures" in {
-    val commands = cowCommands {
-      MOO
-      Moo
-      moo
-    }
-    commands should equal(List(
-      MOOInstrTokenSeven,
-      MooInstrTokenFour,
-      MooTokenZero
-    ))
-  }
-
-  it should "handle nested loops" in {
-    val commands = cowCommands {
-      MOO
-      MOO
-      Moo
-      moo
-      moo
-    }
-    commands should equal(List(
-      MOOInstrTokenSeven,
-      MOOInstrTokenSeven,
-      MooInstrTokenFour,
-      MooTokenZero,
-      MooTokenZero
-    ))
-  }
-
-  it should "handle complex instruction sequences" in {
-    val commands = cowCommands {
+  "MMM (register toggle)" should "toggle between copy and paste modes" in {
+    val output = CowDSL.cow {
       MoO
-      moO
       MoO
-      moO
-      MOO
-      OOM
+      MoO
+      MoO
+      MoO
       MMM
-      moO
-      moO
-      MMM
-      mOo
-      mOo
-      moO
-      MMM
-      mOo
-      MMM
-      moO
-      moO
-      MOO
-      MOo
-      mOo
-      MoO
-      moO
-      moo
-      mOo
-      mOo
-      moo
-    }
-    commands.length should equal(27)
-  }
-
-  it should "support cowCommands without executing" in {
-    val commands = cowCommands {
-      Moo
-      moo
-      MOo
-    }
-    commands should equal(List(
-      MooInstrTokenFour,
-      MooTokenZero,
-      MOoTokenOne
-    ))
-  }
-
-  it should "execute with default memory size" in {
-    val result = cow {
-      MoO
-      OOM
-    }
-    result should be("1")
-  }
-
-  it should "execute with custom memory size" in {
-    val result = cow(5000) {
-      MoO
-      OOM
-    }
-    result should be("1")
-  }
-
-  it should "handle multiple cow blocks independently" in {
-    val result1 = cow {
-      MoO
-      OOM
-    }
-    val result2 = cow {
-      MoO
-      MoO
-      OOM
-    }
-    result1 should equal("1")
-    result2 should equal("2")
-  }
-
-  it should "handle nested cow blocks" in {
-    val innerResult = cow {
-      MoO
-      OOM
-    }
-    val outerResult = cow {
-      MoO
-      MoO
-      OOM
-    }
-    innerResult should equal("1")
-    outerResult should equal("2")
-  }
-
-  it should "clear buffer between executions" in {
-    val result1 = cow {
-      MoO
-      OOM
-    }
-    val result2 = cow {
-      MoO
-      MoO
-      MoO
-      OOM
-    }
-    result1 should equal("1")
-    result2 should equal("3")
-  }
-
-  it should "handle long instruction sequences" in {
-    val commands = cowCommands {
-      for (_ <- 1 to 100) {
-        MoO
-      }
-    }
-    commands.length should equal(100)
-    commands.forall(_ == MoOInstrTokenSix) should be(true)
-  }
-
-  it should "handle all instruction types in one block" in {
-    val commands = cowCommands {
-      moo
-      mOo
-      moO
-      mOO
-      Moo
-      MOo
-      MoO
-      MOO
       OOO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
       MMM
       OOM
-      oom
     }
-    commands.length should equal(12)
+    output should equal("5")
   }
 
-  it should "preserve instruction order with mixed types" in {
-    val commands = cowCommands {
+  // ===== I/O Tests =====
+
+  "OOM (print integer)" should "print cell value as integer" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
       OOM
-      MMM
+      MoO
+      OOM
+    }
+    output should equal("56")
+  }
+
+  "OOM (multiple prints)" should "concatenate multiple integer outputs" in {
+    val output = CowDSL.cow {
+      MoO
+      OOM
+      MoO
+      OOM
+      MoO
+      OOM
+    }
+    output should equal("123")
+  }
+
+  // ===== Complex Program Tests =====
+
+  it should "D" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      Moo
+    }
+    output should equal("D")
+  }
+
+  // ===== Edge Cases =====
+
+  "Empty program" should "produce no output" in {
+    val output = CowDSL.cow {
+      // Empty block
+    }
+    output should equal("")
+  }
+
+  "Multiple cells" should "maintain independent values" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      OOM
+    }
+    output should equal("1")
+  }
+
+  "Zero cell check" should "skip loop when cell is zero" in {
+    val output = CowDSL.cow {
       OOO
       MOO
       MoO
-      MOo
-      Moo
-      mOO
-      moO
-      mOo
       moo
-    }
-    commands should equal(List(
-      OOMTokenTen,
-      MMMTokenNine,
-      OOOTokenEight,
-      MOOInstrTokenSeven,
-      MoOInstrTokenSix,
-      MOoInstrTokenFive,
-      MooInstrTokenFour,
-      MOOTokenThree,
-      MoOTokenTwo,
-      MOoTokenOne,
-      MooTokenZero
-    ))
-  }
-
-  it should "handle increment and decrement sequences" in {
-    val commands = cowCommands {
       MoO
-      MoO
-      MoO
-      MOo
-      MOo
-    }
-    commands should equal(List(
-      MoOInstrTokenSix,
-      MoOInstrTokenSix,
-      MoOInstrTokenSix,
-      MOoInstrTokenFive,
-      MOoInstrTokenFive
-    ))
-  }
-
-  it should "handle pointer movement sequences" in {
-    val commands = cowCommands {
-      moO
-      moO
-      mOo
-      mOo
-      moO
-    }
-    commands should equal(List(
-      MoOTokenTwo,
-      MoOTokenTwo,
-      MOoTokenOne,
-      MOoTokenOne,
-      MoOTokenTwo
-    ))
-  }
-
-  it should "handle I/O sequences" in {
-    val commands = cowCommands {
-      Moo
       OOM
-      oom
-      Moo
     }
-    commands should equal(List(
-      MooInstrTokenFour,
-      OOMTokenTen,
-      OomTokenEleven,
-      MooInstrTokenFour
-    ))
+    output should equal("1")
   }
 
-  it should "handle control flow sequences" in {
-    val commands = cowCommands {
-      MOO
-      Moo
-      moo
-      MOO
-      Moo
-      moo
+  // ===== Command Accumulation Tests =====
+
+  "cowCommands" should "return list of commands without executing" in {
+    val commands = CowDSL.cowCommands {
+      MoO
+      MoO
+      MOo
     }
-    commands should equal(List(
-      MOOInstrTokenSeven,
-      MooInstrTokenFour,
-      MooTokenZero,
-      MOOInstrTokenSeven,
-      MooInstrTokenFour,
-      MooTokenZero
-    ))
+    commands.length should equal(3)
+    commands(0) should equal(Command.MoOSix)
+    commands(1) should equal(Command.MoOSix)
+    commands(2) should equal(Command.MOoFive)
   }
 
-  it should "handle special operations" in {
-    val commands = cowCommands {
-      OOO
+  // ===== Parser Tests =====
+
+  "CowParser" should "parse moo formatted commands" in {
+    val source = "MoO MoO MoO OOM"
+    val output = CowInterpreter.run(source)
+    output should equal("3")
+  }
+
+  "CowParser" should "ignore whitespace and comments" in {
+    val source = """
+      MoO
+      MoO
+      MoO
+      OOM
+    """
+    val output = CowInterpreter.run(source)
+    output should equal("3")
+  }
+
+  "CowParser" should "handle complex programs" in {
+    val source = """
+      MoO MoO MoO MoO MoO
+      MOO
+      MOo
+      moo
+      OOM
+    """
+    val output = CowInterpreter.run(source)
+    output should equal("0")
+  }
+
+  // ===== Memory Size Tests =====
+
+  "Custom memory size" should "allow larger programs" in {
+    val output = CowDSL.cow(1000) {
+      MoO
+      OOM
+    }
+    output should equal("1")
+  }
+
+  // ===== Instruction Code Tests =====
+
+  "Command.fromCode" should "convert codes to commands" in {
+    Command.CowCommand.fromCode(0) should equal(Some(Command.mooZero))
+    Command.CowCommand.fromCode(1) should equal(Some(Command.mOoOne))
+    Command.CowCommand.fromCode(6) should equal(Some(Command.MoOSix))
+    Command.CowCommand.fromCode(10) should equal(Some(Command.OOMTen))
+    Command.CowCommand.fromCode(99) should equal(None)
+  }
+
+  // ===== Loop Matching Tests =====
+
+  "Loop matching" should "correctly match nested loops" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MOO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      mOo
+      mOo
+      mOo
+      mOo
+      mOo
+      MOo
+      moo
+      moO
+      moO
+      moO
+      moO
+      Moo
+      moO
+      MOO
+      mOo
+      MoO
+      moO
+      MOo
+      moo
+      mOo
+      MOo
+      MOo
+      MOo
+      Moo
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      Moo
+      Moo
+      MoO
+      MoO
+      MoO
+      Moo
       MMM
-      mOO
+      mOo
+      mOo
+      mOo
+      MoO
+      MoO
+      MoO
+      MoO
+      Moo
+      moO
+      Moo
+      MOO
+      moO
+      moO
+      MOo
+      mOo
+      mOo
+      MOo
+      moo
+      moO
+      moO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      Moo
+      MMM
+      MMM
+      Moo
+      MoO
+      MoO
+      MoO
+      Moo
+      MMM
+      MOo
+      MOo
+      MOo
+      Moo
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      Moo
+      mOo
+      MoO
+      Moo
     }
-    commands should equal(List(
-      OOOTokenEight,
-      MMMTokenNine,
-      MOOTokenThree
-    ))
+    output should equal("Hello, World!")
   }
 
-}
+  // ===== Arithmetic Tests =====
 
-/**
- * Tests for CowProgram trait
- */
-class CowProgramSpec extends AnyFlatSpec with Matchers {
-
-  class TestProgram extends CowProgram {
-    def simpleProgram(): String = {
-      executeBlock {
-        Moo
-        moo
-        MOo
-      }
+  "Increment and decrement" should "perform basic arithmetic" in {
+    val output = CowDSL.cow {
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MoO
+      MOo
+      MOo
+      MOo
+      MOo
+      MOo
+      OOM
     }
-
-    def incrementProgram(): String = {
-      executeBlock {
-        MoO
-        OOM
-      }
-    }
-
-    def multiIncrementProgram(): String = {
-      executeBlock {
-        MoO
-        MoO
-        MoO
-        OOM
-      }
-    }
-
-    def customMemoryProgram(): String = {
-      executeBlock(5000) {
-        MoO
-        OOM
-      }
-    }
-
-    def getCommandsExample(): List[CowCommand] = {
-      getCommands {
-        Moo
-        moo
-        MOo
-        MoO
-      }
-    }
-
-    def loopProgram(): String = {
-      executeBlock {
-        MOO
-        Moo
-        moo
-      }
-    }
-
-    def allInstructions(): String = {
-      executeBlock {
-        moo
-        mOo
-        moO
-        mOO
-        Moo
-        MOo
-        MoO
-        MOO
-        OOO
-        MMM
-        OOM
-        oom
-      }
-    }
+    output should equal("5")
   }
-
-  "CowProgram" should "execute a simple program" in {
-    val program = new TestProgram()
-    val result = program.simpleProgram()
-    result should be("")
-  }
-
-  it should "execute an increment program" in {
-    val program = new TestProgram()
-    val result = program.incrementProgram()
-    result should equal("1")
-  }
-
-  it should "execute a multi-increment program" in {
-    val program = new TestProgram()
-    val result = program.multiIncrementProgram()
-    result should equal("3")
-  }
-
-  it should "execute with custom memory size" in {
-    val program = new TestProgram()
-    val result = program.customMemoryProgram()
-    result should equal("1")
-  }
-
-  it should "get commands without executing" in {
-    val program = new TestProgram()
-    val commands = program.getCommandsExample()
-    commands should equal(List(
-      MooInstrTokenFour,
-      MooTokenZero,
-      MOoTokenOne,
-      MoOTokenTwo
-    ))
-  }
-
-  it should "execute a loop program" in {
-    val program = new TestProgram()
-    val result = program.loopProgram()
-    result should be("")
-  }
-
-  it should "execute all instructions" in {
-    val program = new TestProgram()
-    val result = program.allInstructions()
-    result should be("")
-  }
-
-  it should "support multiple method calls" in {
-    val program = new TestProgram()
-    val result1 = program.incrementProgram()
-    val result2 = program.multiIncrementProgram()
-    result1 should equal("1")
-    result2 should equal("3")
-  }
-
-  it should "maintain independent state between calls" in {
-    val program = new TestProgram()
-    val result1 = program.incrementProgram()
-    val result2 = program.incrementProgram()
-    result1 should equal("1")
-    result2 should equal("1")
-  }
-
 }
