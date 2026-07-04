@@ -21,8 +21,7 @@ jobs:
 
       - name: Import GPG key
         run: |
-          echo "${{ secrets.PGP_SECRET }}" | base64 --decode > secret.asc
-          gpg --batch --import secret.asc
+          echo "${{ secrets.PGP_SECRET }}" | gpg --batch --import
 
       - name: Release
         run: sbt ci-release
