@@ -40,7 +40,7 @@ This project provides:
 ## Installation
 
 ### Prerequisites
-- Scala 2.13 or later
+- Scala 3
 - SBT (Scala Build Tool)
 
 ## Usage
