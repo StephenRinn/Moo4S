@@ -26,6 +26,9 @@ jobs:
           echo "${{ secrets.PGP_SECRET }}" | base64 --decode > secret.asc
           gpg --batch --import secret.asc
 
+      - name: Debug version
+        run: sbt "show version"
+
       - name: Release
         run: sbt ci-release
         env:
