@@ -1,5 +1,7 @@
 # Moo4S - COW Language Virtual Machine in Scala
 
+Current stable release v1.0.13
+
 ## Overview
 
 **Moo4S** is a complete, spec-compliant implementation of the [COW programming language](https://esolangs.org/wiki/COW) written in Scala. COW is an esoteric programming language derived from Brainfuck that uses bovine-themed commands (`moo`, `MOO`, `Moo`, etc.) instead of single-character operators.
